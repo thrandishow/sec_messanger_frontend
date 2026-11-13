@@ -1,12 +1,15 @@
 // Browser contract for project_back/src/protocol.ts. No server code or secrets.
-export type User = { id: string; nickname: string };
+export type Role = 'admin' | 'moderator' | 'member';
+export type User = { id: string; nickname: string; role: Role; department: string | null; active: number };
+export type Attachment = { id: string; name: string; size: number };
+export type Channel = { channel: string; name: string };
 export type Member = { nickname: string; prefix: string };
 export type Command =
   | { type: 'join' | 'part' | 'names'; channel: string }
-  | { type: 'message'; target: string; text: string };
+  | { type: 'message'; target: string; text: string; attachmentId?: string };
 export type ServerEvent =
   | { type: 'ready'; nickname: string }
-  | { type: 'message'; from: string; target: string; text: string; time: string }
+  | { type: 'message'; from: string; target: string; text: string; time: string; id?: number; attachment?: Attachment }
   | { type: 'join' | 'part'; nickname: string; channel: string }
   | { type: 'quit'; nickname: string }
   | { type: 'names'; channel: string; members: Member[] }
@@ -20,9 +23,15 @@ export const validChannel = (text: string) => /^#[a-z0-9][a-z0-9_-]{0,47}$/.test
 export const validMessage = (text: string) => text.trim().length > 0 && byteLength(text) <= 350 && !/[\x00-\x1f\x7f]/.test(text);
 
 const errors: Record<string, string> = {
+  FORBIDDEN: 'Недостаточно прав для этого действия.', REGISTRATION_CLOSED: 'Аккаунты создаёт администратор сети.',
+  LAST_ADMIN: 'Нельзя отключить или понизить последнего администратора.', NOT_FOUND: 'Объект не найден или недоступен.',
+  STORAGE_FULL: 'Хранилище файлов заполнено. Обратитесь к администратору.',
+  ALREADY_EXISTS: 'Такой отдел уже существует.', MESSAGE_PENDING: 'Дождитесь подтверждения сообщения.',
+  STORAGE_ERROR: 'Не удалось сохранить сообщение. Повторите отправку.', MESSAGE_TIMEOUT: 'Подтверждение не получено. Проверьте историю перед повтором.',
+  NOT_JOINED: 'Сначала войдите в чат.',
+
   INVALID_CREDENTIALS: 'Неверный ник или пароль.', NICKNAME_TAKEN: 'Этот ник уже занят. Выберите другой.',
-  INVALID_INVITATION: 'Код приглашения не подошёл. Уточните его у администратора.',
-  INVALID_INPUT: 'Проверьте ник, пароль и код приглашения.',
+  INVALID_INPUT: 'Проверьте заполненные поля: формат ника, пароль, роль и отдел.',
   ORIGIN_DENIED: 'Адрес этого интерфейса не разрешён на сервере. Проверьте ALLOWED_ORIGINS.',
   LAN_ONLY: 'Подключение доступно только из локальной сети.',
   UNAUTHORIZED: 'Сессия завершилась. Войдите снова.',

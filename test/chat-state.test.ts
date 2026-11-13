@@ -61,14 +61,34 @@ test('valid nicknames cannot collide with inherited JavaScript properties', () =
   assert.equal(state.conversations[key]!.messages.length, 1);
 });
 
-test('bounded in-memory history and UTF-8 validation', () => {
+test('loaded history is retained and UTF-8 validation is enforced', () => {
   let state = initialState();
   for (let i = 0; i < 205; i++) state = event(state, message('bob', '#general', String(i)));
-  assert.equal(state.conversations['#general']!.messages.length, 200);
-  assert.equal(state.conversations['#general']!.messages[0]!.text, '5');
+  assert.equal(state.conversations['#general']!.messages.length, 205);
+  assert.equal(state.conversations['#general']!.messages[0]!.text, '0');
   assert.equal(byteLength('я'), 2);
   assert.equal(validMessage('я'.repeat(175)), true);
   assert.equal(validMessage('я'.repeat(176)), false);
   assert.equal(validMessage('text\r\nJOIN #other'), false);
   assert.equal(validMessage('  '), false);
+});
+
+
+test('history and live events merge by persistent id without duplicates; echo still clears pending', () => {
+  let state = initialState();
+  state = chatReducer(state, { type: 'draft', target: '#general', text: 'saved' });
+  state = chatReducer(state, { type: 'sending', target: '#general', text: 'saved' });
+  state = chatReducer(state, { type: 'history', target: '#general', messages: [
+    { id: 2, from: 'alice', text: 'saved', time: '2026-11-13T10:00:00Z' },
+  ] });
+  state = chatReducer(state, { type: 'event', nickname: 'alice', event: { type: 'message', id: 2,
+    from: 'alice', target: '#general', text: 'saved', time: '2026-11-13T10:00:00Z' } });
+  assert.equal(state.pending, null);
+  assert.equal(state.drafts['#general'], '');
+  assert.equal(state.conversations['#general']!.messages.length, 1);
+  state = chatReducer(state, { type: 'history', target: '#general', messages: [
+    { id: 1, from: 'bob', text: 'older', time: '2026-11-13T09:00:00Z' },
+    { id: 2, from: 'alice', text: 'saved', time: '2026-11-13T10:00:00Z' },
+  ] });
+  assert.deepEqual(state.conversations['#general']!.messages.map(m => m.id), [1, 2]);
 });

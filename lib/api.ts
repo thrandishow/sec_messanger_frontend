@@ -24,3 +24,17 @@ export function socketUrl() {
 }
 export const requestError = (error: unknown) => error instanceof ApiError ? error.message
   : 'Не удалось связаться с сервером. Проверьте сеть и доверие локальному сертификату.';
+
+export const fileUrl = (id: string) => `${base}/api/files/${encodeURIComponent(id)}`;
+export async function uploadFile(file: File, scope: 'chat' | 'resource', target?: string) {
+  if (!file.size || file.size > 10 * 1024 * 1024) throw new Error('Размер файла должен быть от 1 байта до 10 МиБ.');
+  const query = new URLSearchParams({ name: file.name, scope, ...(target ? { target } : {}) });
+  const response = await fetch(`${base}/api/files?${query}`, { method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/octet-stream' }, body: file });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 413) throw new Error('Файл превышает 10 МиБ.');
+    throw new ApiError(response.status, data.error ?? 'UNAVAILABLE');
+  }
+  return (await response.json()).file as import('./protocol').Attachment;
+}

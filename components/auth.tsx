@@ -7,7 +7,6 @@ import type { User } from '@/lib/protocol';
 import { Brand } from './brand';
 
 export function Auth({ onSuccess, notice }: { onSuccess: (user: User) => void; notice: string | null }) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,9 +15,8 @@ export function Auth({ onSuccess, notice }: { onSuccess: (user: User) => void; n
     const data = new FormData(event.currentTarget);
     setBusy(true); setError(null);
     try {
-      const response = await api<{ user: User }>(`/api/auth/${mode}`, {
+      const response = await api<{ user: User }>('/api/auth/login', {
         nickname: String(data.get('nickname')).trim(), password: String(data.get('password')),
-        ...(mode === 'register' ? { invitation: String(data.get('invitation')).trim() } : {}),
       });
       onSuccess(response.user);
     } catch (reason) { setError(requestError(reason)); } finally { setBusy(false); }
@@ -44,20 +42,15 @@ export function Auth({ onSuccess, notice }: { onSuccess: (user: User) => void; n
     <section className="auth-form-panel">
       <div className="auth-topline"><ShieldCheck size={16} /> Внутри локальной сети</div>
       <div className="auth-form-wrap">
-        <div className="auth-tabs" aria-label="Способ входа">
-          <button type="button" className={mode === 'login' ? 'selected' : ''} aria-pressed={mode === 'login'} onClick={() => { setMode('login'); setError(null); }}>Вход</button>
-          <button type="button" className={mode === 'register' ? 'selected' : ''} aria-pressed={mode === 'register'} onClick={() => { setMode('register'); setError(null); }}>Регистрация</button>
-        </div>
-        <h2>{mode === 'login' ? 'Снова на связи.' : 'Станьте частью сети.'}</h2>
-        <p className="auth-description">{mode === 'login' ? 'Войдите, чтобы продолжить разговор.' : 'Для первого входа нужен код приглашения от администратора.'}</p>
+        <h2>Снова на связи.</h2>
+        <p className="auth-description">Войдите с учётной записью, выданной администратором сети.</p>
         {(error || notice) && <div className="form-error" role="alert">{error || notice}</div>}
-        <form onSubmit={submit} key={mode}>
+        <form onSubmit={submit}>
           <label className="field">Ваш ник<input name="nickname" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="Например, alex" pattern="[a-zA-Z][a-zA-Z0-9_]{2,23}" minLength={3} maxLength={24} required disabled={busy} /><span>От 3 до 24 символов: латиница, цифры и _</span></label>
-          <label className="field">Пароль<span className="password-field"><input name="password" type={visible ? 'text' : 'password'} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="Не менее 12 символов" minLength={12} maxLength={128} required disabled={busy} /><button type="button" className="icon-button" aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></span></label>
-          {mode === 'register' && <label className="field">Код приглашения<input type="password" name="invitation" autoComplete="off" placeholder="Код от администратора сети" maxLength={128} required disabled={busy} /></label>}
-          <button className="primary-button auth-submit" disabled={busy} type="submit">{busy ? 'Подключаемся…' : mode === 'login' ? 'Войти в сеть' : 'Создать аккаунт'}{busy ? <span className="spinner" /> : <ArrowRight size={19} />}</button>
+          <label className="field">Пароль<span className="password-field"><input name="password" type={visible ? 'text' : 'password'} autoComplete="current-password" placeholder="Не менее 12 символов" minLength={12} maxLength={128} required disabled={busy} /><button type="button" className="icon-button" aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></span></label>
+          <button className="primary-button auth-submit" disabled={busy} type="submit">{busy ? 'Подключаемся…' : 'Войти в сеть'}{busy ? <span className="spinner" /> : <ArrowRight size={19} />}</button>
         </form>
-        <div className="auth-help"><span className="tiny-rule" />{mode === 'login' ? 'Нет аккаунта?' : 'Уже зарегистрированы?'}<button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); }}>{mode === 'login' ? 'Присоединиться' : 'Войти в сеть'} <ArrowRight size={13} /></button></div>
+        <p className="auth-help">Нет аккаунта? Обратитесь к администратору сети.</p>
       </div>
       <p className="auth-footnote"><ShieldCheck size={17} /><span>Соединение защищено TLS. Сквозное шифрование<br className="desktop-break" /> в этой версии пока не поддерживается.</span></p>
     </section>

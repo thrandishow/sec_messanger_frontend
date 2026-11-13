@@ -1,6 +1,6 @@
-import { errorText, type Member, type ServerEvent } from './protocol.ts';
+import { errorText, type Member, type ServerEvent, type Attachment } from './protocol.ts';
 
-export type Message = { id: number; from: string; text: string; time: string };
+export type Message = { id: number; from: string; text: string; time: string; attachment?: Attachment };
 export type Conversation = { target: string; joined: boolean; members: Member[]; messages: Message[]; unread: number; topic: string };
 export type Status = 'connecting' | 'connected' | 'reconnecting' | 'offline' | 'blocked';
 export type ChatState = { conversations: Record<string, Conversation>; active: string; status: Status;
@@ -10,6 +10,8 @@ const dict = <T>(entries: Record<string, T>): Record<string, T> => Object.assign
 export const initialState = (): ChatState => ({ conversations: dict({ '#general': conversation('#general') }), active: '#general',
   status: 'connecting', error: null, drafts: dict({}), pending: null, sequence: 0 });
 export type Action =
+  | { type: 'history'; target: string; messages: Message[] }
+  | { type: 'catalog'; targets: string[] }
   | { type: 'event'; event: ServerEvent; nickname: string }
   | { type: 'status'; status: Status }
   | { type: 'open'; target: string }
@@ -19,6 +21,18 @@ export type Action =
   | { type: 'error'; message: string | null };
 
 export function chatReducer(state: ChatState, action: Action): ChatState {
+  if (action.type === 'catalog') {
+    const conversations = dict({ ...state.conversations });
+    for (const target of action.targets.slice(0, 50)) conversations[target] ??= conversation(target);
+    return { ...state, conversations };
+  }
+  if (action.type === 'history') {
+    const current = state.conversations[action.target];
+    if (!current) return state;
+    const merged = new Map([...action.messages, ...current.messages].map(m => [m.id, m]));
+    return { ...state, conversations: dict({ ...state.conversations,
+      [action.target]: { ...current, messages: [...merged.values()].sort((a, b) => a.id - b.id) } }) };
+  }
   if (action.type === 'error') return { ...state, error: action.message, pending: null };
   if (action.type === 'draft') return { ...state, drafts: dict({ ...state.drafts, [action.target]: action.text }) };
   if (action.type === 'sending') return { ...state, error: null, pending: { target: action.target, text: action.text } };
@@ -55,8 +69,8 @@ export function chatReducer(state: ChatState, action: Action): ChatState {
       pending: confirmed ? null : state.pending,
       drafts: confirmed && state.drafts[key] === e.text ? dict({ ...state.drafts, [key]: '' }) : state.drafts,
       conversations: dict({ ...state.conversations, [key]: { ...current,
-        messages: [...current.messages, { id: state.sequence + 1, from: e.from, text: e.text, time: e.time }].slice(-200),
-        unread: key !== state.active && e.from !== own ? current.unread + 1 : current.unread,
+        messages: e.id !== undefined && current.messages.some(m => m.id === e.id) ? current.messages : [...current.messages, { id: e.id ?? state.sequence + 1, from: e.from, text: e.text, time: e.time, ...(e.attachment ? { attachment: e.attachment } : {}) }],
+        unread: key !== state.active && e.from !== own && !current.messages.some(m => m.id === e.id) ? current.unread + 1 : current.unread,
       } }) };
   }
   if (e.type === 'quit') return { ...state, conversations: dict(Object.fromEntries(Object.entries(state.conversations)
