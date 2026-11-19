@@ -4,9 +4,6 @@ on:
     branches: ['release-build/**']
 permissions:
   contents: read
-concurrency:
-  group: native-preview-${{ github.ref }}
-  cancel-in-progress: false
 jobs:
   build:
     name: ${{ matrix.platform }}
@@ -81,17 +78,13 @@ jobs:
           mkdir -p build/ios/ipa/Payload dist
           ditto "$app" build/ios/ipa/Payload/Runner.app
           ditto -c -k --norsrc --keepParent build/ios/ipa/Payload dist/shifr-ios-unsigned.ipa
-      - name: Build and launch in iOS Simulator
+      - name: Build and package iOS Simulator
         if: matrix.platform == 'ios-simulator'
         run: |
           set -eu
           flutter build ios --simulator --debug --no-pub
           app=build/ios/iphonesimulator/Runner.app
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneSimulator
-          device=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; print(next(d["udid"] for r,ds in json.load(sys.stdin)["devices"].items() if "iOS" in r for d in ds if "iPhone" in d["name"]))')
-          xcrun simctl bootstatus "$device" -b
-          xcrun simctl install "$device" "$app"
-          xcrun simctl launch "$device" ru.shifrsvyaz.shifrClient
           mkdir -p dist
           ditto -c -k --keepParent "$app" dist/shifr-ios-simulator.zip
       - uses: actions/upload-artifact@v4
@@ -101,3 +94,13 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 5
+      - name: Launch the packaged build in iOS Simulator
+        if: matrix.platform == 'ios-simulator'
+        timeout-minutes: 8
+        run: |
+          set -eu
+          app=build/ios/iphonesimulator/Runner.app
+          device=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; print(next(d["udid"] for r,ds in json.load(sys.stdin)["devices"].items() if "iOS" in r for d in ds if "iPhone" in d["name"]))')
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl install "$device" "$app"
+          xcrun simctl launch "$device" ru.shifrsvyaz.shifrClient
