@@ -6,7 +6,7 @@ permissions:
   contents: read
 concurrency:
   group: native-preview-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   build:
     name: ${{ matrix.platform }}
@@ -77,7 +77,7 @@ jobs:
           flutter build ios --release --no-codesign --no-pub
           app=build/ios/iphoneos/Runner.app
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
-          lipo -verify_arch arm64 "$app/Runner"
+          lipo "$app/Runner" -verify_arch arm64
           mkdir -p build/ios/ipa/Payload dist
           ditto "$app" build/ios/ipa/Payload/Runner.app
           ditto -c -k --norsrc --keepParent build/ios/ipa/Payload dist/shifr-ios-unsigned.ipa
