@@ -6,11 +6,15 @@ import { chatReducer, initialState, type Message } from './chat-state';
 import { errorText, validChannel, validMessage, validNickname, type Command, type ServerEvent, type User, type Channel } from './protocol';
 
 export function useChat(user: User, onExpired: () => void) {
-  const [state, dispatch] = useReducer(chatReducer, undefined, initialState);
+  const [state, dispatch] = useReducer(chatReducer, undefined, () => {
+    const state = initialState();
+    return window.matchMedia('(max-width: 760px)').matches ? { ...state, active: '' } : state;
+  });
   const current = useRef(state);
   current.current = state;
   const ws = useRef<WebSocket | null>(null);
   const [generation, setGeneration] = useState(0);
+  const [directoryUsers, setDirectoryUsers] = useState<string[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [cursors, setCursors] = useState<Record<string, number | null>>({});
   const [historyBusy, setHistoryBusy] = useState(false);
@@ -62,9 +66,10 @@ export function useChat(user: User, onExpired: () => void) {
           if (event.nickname !== user.nickname) { onExpired(); return; }
           attempts = 0;
           clearTimers();
-          api<{ channels: Channel[]; conversations: string[] }>('/api/directory').then(directory => {
+          api<{ channels: Channel[]; conversations: string[]; users?: { nickname: string }[] }>('/api/directory').then(directory => {
             if (cancelled || ws.current !== socket) return;
             setChannels(directory.channels);
+            setDirectoryUsers((directory.users ?? []).map(u => u.nickname).filter(n => n !== user.nickname));
             const allowed = new Set(directory.channels.map(c => c.channel));
             for (const target of Object.keys(current.current.conversations)) {
               if (target.startsWith('#') && !allowed.has(target)) dispatch({ type: 'remove', target });
@@ -157,6 +162,6 @@ export function useChat(user: User, onExpired: () => void) {
     } catch (error) { dispatch({ type: 'error', message: error instanceof Error ? error.message : requestError(error) }); }
     finally { setUploading(false); }
   };
-  return { state, dispatch, open, leave, sendMessage, sendFile, uploading, channels, loadOlder, historyBusy,
+  return { state, dispatch, open, leave, sendMessage, sendFile, uploading, channels, directoryUsers, loadOlder, historyBusy,
     hasOlder: Boolean(cursors[state.active]), reconnect: () => setGeneration(value => value + 1) };
 }

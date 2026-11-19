@@ -10,6 +10,7 @@ const dict = <T>(entries: Record<string, T>): Record<string, T> => Object.assign
 export const initialState = (): ChatState => ({ conversations: dict({ '#general': conversation('#general') }), active: '#general',
   status: 'connecting', error: null, drafts: dict({}), pending: null, sequence: 0 });
 export type Action =
+  | { type: 'deselect' }
   | { type: 'history'; target: string; messages: Message[] }
   | { type: 'catalog'; targets: string[] }
   | { type: 'event'; event: ServerEvent; nickname: string }
@@ -21,6 +22,7 @@ export type Action =
   | { type: 'error'; message: string | null };
 
 export function chatReducer(state: ChatState, action: Action): ChatState {
+  if (action.type === 'deselect') return { ...state, active: '' };
   if (action.type === 'catalog') {
     const conversations = dict({ ...state.conversations });
     for (const target of action.targets.slice(0, 50)) conversations[target] ??= conversation(target);

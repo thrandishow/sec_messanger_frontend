@@ -1,10 +1,15 @@
-export function Brand({ dark = false }: { dark?: boolean }) {
-  return <div className={`brand ${dark ? 'brand-on-dark' : ''}`}>
-    <span className="brand-symbol" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M13 5v30M27 5v30M5 14h30M5 26h30" /></svg></span>
-    <span>шифр<span className="brand-separator">/</span>связь<span className="brand-caption">СВОЯ СЕТЬ. СВОИ ЛЮДИ.</span></span>
-  </div>;
+import { Hash, Megaphone, MessagesSquare } from 'lucide-react';
+
+export function BrandMark() {
+  return <span className="brand-mark" aria-hidden="true"><Hash strokeWidth={2.6} /></span>;
 }
-export function Avatar({ name, small = false }: { name: string; small?: boolean }) {
-  const tone = [...name].reduce((value, char) => value + char.charCodeAt(0), 0) % 5;
-  return <span aria-hidden="true" className={`avatar tone-${tone} ${small ? 'avatar-small' : ''}`}>{name.slice(0, 2).toUpperCase()}</span>;
+
+export function Avatar({ name, title = name }: { name: string; title?: string }) {
+  const tone = [...name].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 6;
+  const kind = name === '#general' ? 'general' : name === '#announcements' ? 'announcements' : tone;
+  const initials = title.trim().split(/[\s_-]+/).filter(Boolean);
+  const letters = initials.slice(0, 2).map(word => word.charAt(0)).join('');
+  return <span aria-hidden="true" className={`avatar tone-${kind}`}>
+    {name === '#general' ? <MessagesSquare /> : name === '#announcements' ? <Megaphone /> : letters.toLocaleUpperCase('ru')}
+  </span>;
 }

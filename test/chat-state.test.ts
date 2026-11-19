@@ -92,3 +92,14 @@ test('history and live events merge by persistent id without duplicates; echo st
   ] });
   assert.deepEqual(state.conversations['#general']!.messages.map(m => m.id), [1, 2]);
 });
+
+test('returning to the mobile chat list keeps the draft and counts new messages as unread', () => {
+  let state = chatReducer(initialState(), { type: 'draft', target: '#general', text: 'Черновик' });
+  state = chatReducer(state, { type: 'deselect' });
+  state = event(state, { type: 'message', id: 24, from: 'bob', target: '#general', text: 'Привет', time: '2026-11-19T12:00:00Z' });
+  assert.equal(state.active, '');
+  assert.equal(state.conversations['#general']!.unread, 1);
+  state = chatReducer(state, { type: 'open', target: '#general' });
+  assert.equal(state.conversations['#general']!.unread, 0);
+  assert.equal(state.drafts['#general'], 'Черновик');
+});
