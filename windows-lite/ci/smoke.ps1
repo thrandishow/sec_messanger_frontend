@@ -13,6 +13,7 @@ public static class WinSmoke {
     [DllImport("user32", CharSet=CharSet.Unicode, EntryPoint="SendMessageTimeoutW")] static extern IntPtr Msg(IntPtr w, uint m, IntPtr wp, IntPtr lp, uint flags, uint timeout, out IntPtr result);
     [DllImport("user32", CharSet=CharSet.Unicode, EntryPoint="SendMessageTimeoutW")] static extern IntPtr Get(IntPtr w, uint m, IntPtr wp, StringBuilder text, uint flags, uint timeout, out IntPtr result);
     [DllImport("user32", CharSet=CharSet.Unicode, EntryPoint="SendMessageTimeoutW")] static extern IntPtr Set(IntPtr w, uint m, IntPtr wp, string text, uint flags, uint timeout, out IntPtr result);
+    public static IntPtr ByTitle(string title) {return FindWindow(null,title);}
     public static List<IntPtr> Children(IntPtr parent, string cls) {
         var list = new List<IntPtr>(); IntPtr w = IntPtr.Zero;
         while ((w = FindWindowEx(parent,w,cls,null)) != IntPtr.Zero) list.Add(w);
@@ -38,7 +39,7 @@ function Wait-For($Condition, $Description) {
         Start-Sleep -Milliseconds 150
     } until ($watch.Elapsed.TotalSeconds -gt 25)
     foreach ($title in @('Шифр-связь — Вход','Шифр-связь — qa_user')) {
-        $w=[WinSmoke]::FindWindow($null,$title)
+        $w=[WinSmoke]::ByTitle($title)
         if ($w -ne [IntPtr]::Zero) {
             foreach ($label in [WinSmoke]::Children($w,'Static')) {Write-Host ([WinSmoke]::Read($label))}
         }
@@ -54,7 +55,7 @@ function Click-Button($Parent, $Label) {
     $null = [WinSmoke]::Number($b,0xF5)
 }
 function Visible-Window($Title) {
-    $w=[WinSmoke]::FindWindow($null,$Title)
+    $w=[WinSmoke]::ByTitle($Title)
     if ($w -ne [IntPtr]::Zero -and [WinSmoke]::IsWindowVisible($w)) {return $w}
 }
 $fixture = Start-Process python -ArgumentList 'ci/fixture.py' -PassThru -NoNewWindow
