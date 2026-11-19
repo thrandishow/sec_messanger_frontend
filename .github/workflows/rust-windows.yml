@@ -1,0 +1,47 @@
+name: Build Rust Windows clients
+on:
+  push:
+    branches: ['release-build/rust-windows-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: x86_64-pc-windows-msvc, arch: x64}
+          - {target: i686-pc-windows-msvc, arch: x86}
+    name: Windows ${{ matrix.arch }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: windows-lite
+    env:
+      RUSTFLAGS: '-C target-feature=+crt-static'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo test --locked --target ${{ matrix.target }}
+      - run: cargo build --locked --release --target ${{ matrix.target }}
+      - name: Smoke test on Windows
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check aiohttp trustme
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./ci/smoke.ps1 -Executable "target/${{ matrix.target }}/release/shifr-windows.exe"
+      - name: Package executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/shifr-windows.exe" "dist/shifr-windows-lite-${{ matrix.arch }}.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shifr-windows-lite-${{ matrix.arch }}
+          path: windows-lite/dist/*.exe
+          if-no-files-found: error
+          retention-days: 5
