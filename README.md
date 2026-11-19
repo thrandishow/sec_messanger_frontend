@@ -1,5 +1,10 @@
 # Шифр-связь — приложения для локальной сети
 
+## Лёгкая версия для Windows
+
+Для ПК с ограниченной памятью есть отдельный клиент чата на Rust с интерфейсом Win32.
+[Скачать EXE для x64 или x86](https://github.com/thrandishow/sec_messanger_frontend/releases/tag/windows-lite-v0.1.0-preview.1) · [Вход и сборка](windows-lite/README.md).
+
 ## Нативное приложение Flutter
 
 Основной клиент для Android, iOS, Windows, macOS и Linux — в `native/`.
