@@ -1,4 +1,20 @@
-# Шифр-связь — frontend
+# Шифр-связь — приложения для локальной сети
+
+## Нативное приложение Flutter
+
+Основной клиент для Android, iOS, Windows, macOS и Linux — в `native/`.
+После запуска сервера в `project_back` выполните, например, на Linux:
+
+```bash
+cd native
+flutter pub get
+flutter run -d linux
+```
+
+В приложении введите LAN-IP сервера с портом 8443, выберите публичный `ca.crt` и войдите.
+[Сборка на остальных платформах и настройка TLS](native/README.md).
+
+## Веб-клиент Next.js
 
 Next.js/React, статическая сборка под Nginx. Бэкенд и общий Compose находятся в
 соседней папке `project_back`. Запуск обоих сервисов: `bash start.sh <LAN-IP>`.
